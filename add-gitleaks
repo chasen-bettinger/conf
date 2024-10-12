@@ -1,0 +1,11 @@
+curl -o gitleaks.tgz -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v8.16.4/gitleaks_8.16.4_darwin_x64.tar.gz"
+echo "4ac90876951f79341a76c61e847394c25895a5c5bbf316453757f7b48651b869" | sha256sum --check
+
+tar --no-same-owner -zxf gitleaks.tgz gitleaks
+rm gitleaks.tgz
+chmod +x gitleaks
+
+detect --no-banner --exit-code 0 --redact --report-format sarif --no-git --report-path ./gitleaks-output.sarif --source .
+
+
+curl -o nancy -fsSL "https://github.com/sonatype-nexus-community/nancy/releases/download/v1.0.41/nancy-v1.0.41-darwin-amd64"
