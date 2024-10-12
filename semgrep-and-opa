@@ -1,0 +1,29 @@
+semgrep \
+    --no-rewrite-rule-ids \
+    --metrics=off \
+    --quiet \
+    --config=scripts/rules \
+    --json \
+    --output=semgrep-account-mgmt.json \
+    --exclude=tests \
+    --exclude=testing \
+    --exclude=alembic \
+    file
+
+opa \
+    eval \
+    --data data/repos.yml \
+    --input semgrep-account-mgmt.json \
+    --data scripts/analyze.rego \
+    -f pretty \
+    "data.analyze.output" > "account-mgmt-opa.txt"
+
+
+opa \
+    eval \
+    --data data/repos.yml \
+    --input semgrep-account-mgmt.json \
+    --data scripts/analyze.rego \
+    -f pretty \
+    --explain debug \
+    "data.oo.x" > "account-mgmt-opa-x.txt"
