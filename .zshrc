@@ -127,6 +127,6 @@ alias fstr='find-string'
 eval "$(atuin init zsh)"
 eval "$(starship init zsh)"
 
-atuin sync
+atuin sync || true
 
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
