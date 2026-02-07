@@ -19,6 +19,7 @@ source $ZSH/oh-my-zsh.sh
 alias gs='git status'
 alias gpms='git pull origin main-stage'
 alias gca='git commit -am'
+alias gcap='git add -A && git commit -s && gph'
 alias gc='git commit'
 alias gph='git push'
 alias gphnb='git push -u origin'
@@ -40,6 +41,22 @@ alias less='less -N'
 alias rot13="tr 'A-Za-z' 'N-ZA-Mn-za-m'"
 alias sa='source ~/.zshrc'
 alias sb='vi ~/.zshrc'
+alias tf='terraform'
+alias gsq='git reset --soft origin/HEAD'
+alias gsq2='git reset --soft $(git merge-base master HEAD)'
+alias grc='git rebase --continue'
+alias gsp='git stash pop'
+alias gst='git stash'
+alias grbo='git checkout --ours . && ga . && git rebase --continue'
+alias grbt='git checkout --theirs . && ga . && git rebase --continue'
+alias k='kubectl'
+alias app='kubectl -n app'
+alias cfc='kubectl -n "cloudflare-controller"'
+alias aw='kubectl -n argo-workflows'
+alias kctx='kubectl config use-context'
+alias aws-who='aws iam list-account-aliases --output json |  jq ".AccountAliases"'
+alias rmk8saws='rm ~/.kube/config ~/.aws/credentials'
+alias gitleaks_scan='gitleaks git --log-opts="--all" -f "json" -r "./gitleaks.json"'
 
 # RESET DATABASES
 alias resetmy='sudo docker container exec -i dev_db_1 mysql -u root -ppassword tib_dev_9101 < dump.sql'
@@ -90,6 +107,30 @@ function unix_time() {
         date -r $date_as_integer
     fi
 }
+
+function get-services() {
+  local services=($(kubectl -n app get services -o name))
+  local result=()
+  for service in $services; do
+    local service_name=$(echo $service | sed 's/service\///')
+    service_name=$(echo $service_name | sed 's/svc-//')
+    result+=($service_name)
+  done
+  echo "${result[@]}"
+}
+
+function print-services() {
+  local services=($(get-services))
+  for service in $services; do
+    echo $service
+  done
+}
+
+function find-string() {
+ grep -ri $1 .
+}
+
+alias fstr='find-string'
 
 eval "$(atuin init zsh)"
 
