@@ -9,6 +9,7 @@ ZSHRC_TARGET="$HOME/.zshrc"
 PLUGINS_FILE="$REPO_DIR/oh-my-zsh-plugins/plugins.txt"
 CUSTOM_PLUGINS_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
+ATUIN=$(brew list | grep "atuin" || echo "missing")
 
 link_file() {
     local src="$1"
@@ -45,6 +46,11 @@ fi
 if [ ! -f "$STARSHIP_CONFIG" ]; then
     echo "Missing startship config.. installing starship..."
     curl -sS https://starship.rs/install.sh | sh -s -- -y > /dev/null 2>&1
+fi
+
+if [[ "$ATUIN" == "missing" ]]; then
+    echo "Missing atuin.. installing atuin..."
+    brew install atuin
 fi
 
 # Create .zshrc.local if it doesn't exist
