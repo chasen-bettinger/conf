@@ -6,8 +6,9 @@ echo "\$0 :>> $0"
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 ZSHRC_SOURCE="$REPO_DIR/.zshrc"
 ZSHRC_TARGET="$HOME/.zshrc"
-P10K_SOURCE="$REPO_DIR/.p10k.zsh"
-P10K_TARGET="$HOME/.p10k.zsh"
+PLUGINS_FILE="$REPO_DIR/oh-my-zsh-plugins/plugins.txt"
+CUSTOM_PLUGINS_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
+STARSHIP_CONFIG="$HOME/.config/starship.toml"
 
 link_file() {
     local src="$1"
@@ -24,11 +25,7 @@ link_file() {
 }
 
 link_file "$ZSHRC_SOURCE" "$ZSHRC_TARGET"
-link_file "$P10K_SOURCE" "$P10K_TARGET"
 
-# Install oh-my-zsh custom plugins
-PLUGINS_FILE="$REPO_DIR/oh-my-zsh-plugins/plugins.txt"
-CUSTOM_PLUGINS_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
 
 if [ -f "$PLUGINS_FILE" ]; then
     while read -r name url; do
@@ -42,6 +39,12 @@ if [ -f "$PLUGINS_FILE" ]; then
             git clone --quiet "$url" "$dest"
         fi
     done < "$PLUGINS_FILE"
+fi
+
+
+if [ ! -f "$STARSHIP_CONFIG" ]; then
+    echo "Missing startship config.. installing starship..."
+    curl -sS https://starship.rs/install.sh | sh -s -- -y > /dev/null 2>&1
 fi
 
 # Create .zshrc.local if it doesn't exist
