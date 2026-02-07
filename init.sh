@@ -1,21 +1,31 @@
 #!/usr/bin/env zsh 
 set -e
 
+echo "\$0 :>> $0"
+
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 ZSHRC_SOURCE="$REPO_DIR/.zshrc"
 ZSHRC_TARGET="$HOME/.zshrc"
+P10K_SOURCE="$REPO_DIR/.p10k.zsh"
+P10K_TARGET="$HOME/.p10k.zsh"
 
-# Back up existing .zshrc if it's not already a symlink to us
-if [ -f "$ZSHRC_TARGET" ] && [ ! -L "$ZSHRC_TARGET" ]; then
-    echo "Backing up existing ~/.zshrc to ~/.zshrc.backup"
-    mv "$ZSHRC_TARGET" "$ZSHRC_TARGET.backup"
-elif [ -L "$ZSHRC_TARGET" ]; then
-    echo "Removing existing symlink at ~/.zshrc"
-    rm "$ZSHRC_TARGET"
-fi
+link_file() {
+    local src="$1"
+    local dest="$2"
+    if [ -f "$dest" ] && [ ! -L "$dest" ]; then
+        echo "Backing up existing $dest to $dest.backup"
+        mv "$dest" "$dest.backup"
+    elif [ -L "$dest" ]; then
+        echo "Removing existing symlink at $dest"
+        rm "$dest"
+    fi
+    ln -s "$src" "$dest"
+    echo "Symlinked $dest → $src"
+}
 
-ln -s "$ZSHRC_SOURCE" "$ZSHRC_TARGET"
-echo "Symlinked ~/.zshrc → $ZSHRC_SOURCE"
+link_file "$ZSHRC_SOURCE" "$ZSHRC_TARGET"
+link_file "$P10K_SOURCE" "$P10K_TARGET"
+
 
 # Create .zshrc.local if it doesn't exist
 if [ ! -f "$HOME/.zshrc.local" ]; then
