@@ -26,7 +26,11 @@ link_file() {
     echo "Symlinked $dest → $src"
 }
 
+CLAUDE_MD_SOURCE="$REPO_DIR/CLAUDE.md"
+CLAUDE_MD_TARGET="$HOME/.claude/CLAUDE.md"
+
 link_file "$ZSHRC_SOURCE" "$ZSHRC_TARGET"
+link_file "$CLAUDE_MD_SOURCE" "$CLAUDE_MD_TARGET"
 
 
 if [ -f "$PLUGINS_FILE" ]; then
@@ -57,6 +61,12 @@ fi
 if [[ "$NONO" == "missing" ]]; then
     echo "Missing nono.. installing nono..."
     brew install nono
+fi
+
+# Create chasen-learnings directory for knowledge notes
+if [ ! -d "$HOME/Documents/chasen-learnings" ]; then
+    mkdir -p "$HOME/Documents/chasen-learnings"
+    echo "Created ~/Documents/chasen-learnings"
 fi
 
 # Create .zshrc.local if it doesn't exist
