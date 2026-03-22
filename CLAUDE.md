@@ -61,10 +61,12 @@
 ## Languages
 
 - For local scripts and tools, be partial to Elixir. I value the functional programming paradigm and its constraints.
+- For CLI tools that primarily orchestrate other CLI commands (shelling out, capturing output, terminal interaction like password prompts), use bash. The BEAM VM's I/O model fights against direct terminal control and Unix process inheritance. If the tool is mostly `command | command | command` with some glue logic, bash does it natively — don't reach for a compiled or runtime language.
 - For web apps, be partial to Ruby on Rails. I value the convention over configuration approach and building web applications without virtual DOM technologies, like React.
 - For standalone binaries, be partial to Golang. I value the simplicity of Golang and its ability to create parallelizable functions. Consider Erlang/Elixir as an option as well.
 - For APIs be partial to Python and FastAPI. I value creating programs that can be built quickly. We can migrate to a different framework later if necessary.
 - Always utilize data before making a different decision. For example, if something will be faster if it is written in Rust, show a side-by-side comparison of this speed difference.
+- Before choosing a language, consider what the tool actually does at runtime. If 80%+ of the work is shelling out to other programs, a shell script is probably the right answer regardless of language preferences.
 - Languages are a tool, nothing else. Always choose the right tool for the job.
 
 ## Security
