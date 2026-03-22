@@ -63,6 +63,16 @@ if [[ "$NONO" == "missing" ]]; then
     brew install nono
 fi
 
+if ! command -v bw &> /dev/null; then
+    echo "Missing bw.. installing bitwarden cli..."
+    "$REPO_DIR/add-bw"
+fi
+
+if ! command -v gitleaks &> /dev/null; then
+    echo "Missing gitleaks.. installing gitleaks..."
+    "$REPO_DIR/add-gitleaks"
+fi
+
 # Create chasen-learnings directory for knowledge notes
 if [ ! -d "$HOME/Documents/chasen-learnings" ]; then
     mkdir -p "$HOME/Documents/chasen-learnings"
