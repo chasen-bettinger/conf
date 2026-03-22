@@ -10,6 +10,7 @@ PLUGINS_FILE="$REPO_DIR/oh-my-zsh-plugins/plugins.txt"
 CUSTOM_PLUGINS_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
 ATUIN=$(brew list | grep "atuin" || echo "missing")
+NONO=$(brew list | grep "nono" || echo "missing")
 
 link_file() {
     local src="$1"
@@ -51,6 +52,11 @@ fi
 if [[ "$ATUIN" == "missing" ]]; then
     echo "Missing atuin.. installing atuin..."
     brew install atuin
+fi
+
+if [[ "$NONO" == "missing" ]]; then
+    echo "Missing nono.. installing nono..."
+    brew install nono
 fi
 
 # Create .zshrc.local if it doesn't exist
