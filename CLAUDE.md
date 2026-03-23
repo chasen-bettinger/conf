@@ -5,6 +5,7 @@
 - Be concise. Lead with the answer, skip the preamble.
 - Don't summarize what you just did — I can read the diff.
 - Don't add emojis unless I ask.
+- Never assume — always look for evidence first. Read the actual file, check the actual config, run the actual command. If you don't have evidence, go get it before stating anything as fact.
 
 ## Code Style
 
