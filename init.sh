@@ -9,8 +9,13 @@ ZSHRC_TARGET="$HOME/.zshrc"
 PLUGINS_FILE="$REPO_DIR/oh-my-zsh-plugins/plugins.txt"
 CUSTOM_PLUGINS_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
-ATUIN=$(brew list | grep "atuin" || echo "missing")
-NONO=$(brew list | grep "nono" || echo "missing")
+brew_install() {
+    local pkg="$1"
+    if ! brew list "$pkg" &> /dev/null; then
+        echo "Missing $pkg.. installing $pkg..."
+        brew install "$pkg"
+    fi
+}
 
 link_file() {
     local src="$1"
@@ -53,15 +58,9 @@ if [ ! -f "$STARSHIP_CONFIG" ]; then
     curl -sS https://starship.rs/install.sh | sh -s -- -y > /dev/null 2>&1
 fi
 
-if [[ "$ATUIN" == "missing" ]]; then
-    echo "Missing atuin.. installing atuin..."
-    brew install atuin
-fi
-
-if [[ "$NONO" == "missing" ]]; then
-    echo "Missing nono.. installing nono..."
-    brew install nono
-fi
+brew_install atuin
+brew_install nono
+brew_install gh
 
 if ! command -v bw &> /dev/null; then
     echo "Missing bw.. installing bitwarden cli..."
