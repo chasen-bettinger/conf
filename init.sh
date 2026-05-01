@@ -61,6 +61,7 @@ fi
 brew_install atuin
 brew_install nono
 brew_install gh
+brew_install kubeconform
 
 if ! command -v bw &> /dev/null; then
     echo "Missing bw.. installing bitwarden cli..."
