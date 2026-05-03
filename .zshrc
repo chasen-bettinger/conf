@@ -129,4 +129,6 @@ eval "$(starship init zsh)"
 
 atuin sync || true
 
+echo "Sourcing local zshrc..."
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+echo "Sourcing local complete..."

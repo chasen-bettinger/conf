@@ -3,7 +3,15 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    URL="https://github.com/gitleaks/gitleaks/releases/download/v8.16.4/gitleaks_8.16.4_darwin_arm64.tar.gz"
+    SHA256="4ac90876951f79341a76c61e847394c25895a5c5bbf316453757f7b48651b869"
+else
+    URL="https://github.com/gitleaks/gitleaks/releases/download/v8.16.4/gitleaks_8.16.4_linux_x64.tar.gz"
+    SHA256="4166458d288be6453a9485665b8b5e6a50e6e29300207eb84fcb375c6b32702e"
+fi
+
 "$SCRIPT_DIR/gh-install.sh" \
-    "https://github.com/gitleaks/gitleaks/releases/download/v8.16.4/gitleaks_8.16.4_darwin_x64.tar.gz" \
-    "4ac90876951f79341a76c61e847394c25895a5c5bbf316453757f7b48651b869" \
+    "$URL" \
+    "$SHA256" \
     gitleaks
