@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REGISTRY="${GH_INSTALL_REGISTRY:-${SCRIPT_DIR}/binaries.yaml}"
+STATE_FILE="${HOME}/.local/state/gh_install/installed.yaml"
+
+usage() {
+    echo "Usage: $0 <binary> [install_dir]" >&2
+    echo "  install_dir defaults to /usr/local/bin" >&2
+}
+
+if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+fi
+
+BINARY_KEY="$1"
+INSTALL_DIR="${2:-/usr/local/bin}"
+
+if ! command -v yq >/dev/null 2>&1; then
+    echo "Error: yq is required. Install with 'brew install yq' or 'apt install yq'." >&2
+    exit 1
+fi
+
+if [[ ! -f "$REGISTRY" ]]; then
+    echo "Error: registry not found at $REGISTRY" >&2
+    exit 1
+fi
+
+if ! BINARY_KEY="$BINARY_KEY" yq -e '.[strenv(BINARY_KEY)]' "$REGISTRY" >/dev/null 2>&1; then
+    echo "Error: '${BINARY_KEY}' is not in the registry. Available keys:" >&2
+    yq 'keys | .[]' "$REGISTRY" | sed 's/^/  /' >&2
+    exit 1
+fi
+
+case "$(uname -s)" in
+    Linux)  OS=linux ;;
+    Darwin) OS=darwin ;;
+    *) echo "Error: unsupported OS: $(uname -s) (only linux/darwin supported)" >&2; exit 1 ;;
+esac
+
+case "$(uname -m)" in
+    x86_64|amd64)  ARCH=amd64 ;;
+    aarch64|arm64) ARCH=arm64 ;;
+    *) echo "Error: unsupported architecture: $(uname -m) (only amd64/arm64 supported)" >&2; exit 1 ;;
+esac
+
+PLATFORM="${OS}-${ARCH}"
+
+VERSION=$(BINARY_KEY="$BINARY_KEY" yq '.[strenv(BINARY_KEY)].version' "$REGISTRY")
+
+if [[ -f "$STATE_FILE" ]]; then
+    INSTALLED_VERSION=$(BINARY_KEY="$BINARY_KEY" yq '.[strenv(BINARY_KEY)] // ""' "$STATE_FILE")
+    if [[ "$INSTALLED_VERSION" == "$VERSION" ]]; then
+        echo "${BINARY_KEY} ${VERSION} is already installed"
+        echo "(remove the entry from ${STATE_FILE} to reinstall)"
+        exit 0
+    fi
+fi
+
+SOURCE=$(BINARY_KEY="$BINARY_KEY" yq '.[strenv(BINARY_KEY)].source' "$REGISTRY")
+BINARY_NAME=$(BINARY_KEY="$BINARY_KEY" yq '.[strenv(BINARY_KEY)].binary' "$REGISTRY")
+
+OVERRIDE=$(BINARY_KEY="$BINARY_KEY" PLATFORM="$PLATFORM" yq '.[strenv(BINARY_KEY)].asset_template_overrides[strenv(PLATFORM)]' "$REGISTRY")
+if [[ "$OVERRIDE" == "null" ]]; then
+    TEMPLATE=$(BINARY_KEY="$BINARY_KEY" yq '.[strenv(BINARY_KEY)].asset_template' "$REGISTRY")
+elif [[ -z "$OVERRIDE" ]]; then
+    echo "Error: ${BINARY_KEY} does not support ${PLATFORM} (asset_template_overrides marks it unsupported)" >&2
+    exit 1
+else
+    TEMPLATE="$OVERRIDE"
+fi
+
+OS_TOKEN=$(BINARY_KEY="$BINARY_KEY" OS="$OS" yq '.[strenv(BINARY_KEY)].os_map[strenv(OS)] // strenv(OS)' "$REGISTRY")
+ARCH_TOKEN=$(BINARY_KEY="$BINARY_KEY" ARCH="$ARCH" yq '.[strenv(BINARY_KEY)].arch_map[strenv(ARCH)] // strenv(ARCH)' "$REGISTRY")
+
+URL="${TEMPLATE//\{source\}/$SOURCE}"
+URL="${URL//\{version\}/$VERSION}"
+URL="${URL//\{os\}/$OS_TOKEN}"
+URL="${URL//\{arch\}/$ARCH_TOKEN}"
+
+EXPECTED=$(BINARY_KEY="$BINARY_KEY" PLATFORM="$PLATFORM" yq '.[strenv(BINARY_KEY)].checksums[strenv(PLATFORM)] // ""' "$REGISTRY")
+if [[ -z "$EXPECTED" || "$EXPECTED" == "null" ]]; then
+    echo "Error: no checksum recorded for ${BINARY_KEY}/${PLATFORM}." >&2
+    echo "Run ./get_checksums to populate it." >&2
+    exit 1
+fi
+
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+
+FILENAME="${URL##*/}"
+ASSET_PATH="${TMPDIR}/${FILENAME}"
+echo "Downloading ${BINARY_KEY} ${VERSION} from ${URL}..."
+if ! curl -fsSL -o "$ASSET_PATH" "$URL"; then
+    echo "Error: download failed for ${URL}" >&2
+    exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL=$(sha256sum "$ASSET_PATH" | awk '{print $1}')
+else
+    ACTUAL=$(shasum -a 256 "$ASSET_PATH" | awk '{print $1}')
+fi
+
+if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+    echo "Error: checksum mismatch for ${BINARY_KEY}/${PLATFORM}" >&2
+    echo "  Expected: ${EXPECTED}" >&2
+    echo "  Got:      ${ACTUAL}" >&2
+    exit 1
+fi
+echo "Checksum verified."
+
+case "$FILENAME" in
+    *.tar.gz|*.tgz)
+        tar --no-same-owner -C "$TMPDIR" -zxf "$ASSET_PATH" "$BINARY_NAME"
+        ;;
+    *.zip)
+        (cd "$TMPDIR" && unzip -o -q "$ASSET_PATH" "$BINARY_NAME")
+        ;;
+    *)
+        mv "$ASSET_PATH" "${TMPDIR}/${BINARY_NAME}"
+        ;;
+esac
+
+EXTRACTED="${TMPDIR}/${BINARY_NAME}"
+if [[ ! -f "$EXTRACTED" ]]; then
+    echo "Error: ${BINARY_NAME} not found in archive" >&2
+    exit 1
+fi
+
+chmod +x "$EXTRACTED"
+
+if [[ ! -d "$INSTALL_DIR" ]]; then
+    echo "Error: install dir does not exist: ${INSTALL_DIR}" >&2
+    exit 1
+fi
+if [[ ! -w "$INSTALL_DIR" ]]; then
+    echo "Error: cannot write to ${INSTALL_DIR}" >&2
+    exit 1
+fi
+
+mv "$EXTRACTED" "${INSTALL_DIR}/${BINARY_NAME}"
+
+mkdir -p "$(dirname "$STATE_FILE")"
+if [[ ! -f "$STATE_FILE" ]]; then
+    echo "{}" > "$STATE_FILE"
+fi
+BINARY_KEY="$BINARY_KEY" VERSION="$VERSION" yq -i '.[strenv(BINARY_KEY)] = strenv(VERSION)' "$STATE_FILE"
+
+echo "Installed ${BINARY_NAME} ${VERSION} to ${INSTALL_DIR}/${BINARY_NAME}"

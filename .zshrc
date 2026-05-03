@@ -48,7 +48,7 @@ alias aw='kubectl -n argo-workflows'
 alias kctx='kubectl config use-context'
 alias aws-who='aws iam list-account-aliases --output json |  jq ".AccountAliases"'
 alias rmk8saws='rm ~/.kube/config ~/.aws/credentials'
-alias gitleaks_scan='gitleaks git --log-opts="--all" -f "json" -r "./gitleaks.json"'
+alias gitleaks_scan='gitleaks detect --log-opts="--all" -f "json" -r "./gitleaks.json"'
 
 # RESET DATABASES
 alias resetmy='sudo docker container exec -i dev_db_1 mysql -u root -ppassword tib_dev_9101 < dump.sql'

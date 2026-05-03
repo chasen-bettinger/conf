@@ -1,0 +1,25 @@
+gitleaks:
+  source: gitleaks/gitleaks
+  version: 8.16.4
+  binary: gitleaks
+  asset_template: "https://example.test/{source}/releases/download/v{version}/gitleaks_{version}_{os}_{arch}.tar.gz"
+  arch_map:
+    amd64: x64
+  checksums:
+    linux-amd64: 8799a66d5a3292776ced60e068244d87cf38f8b6b8169de4400202ad4e006ac2
+    linux-arm64: ""
+    darwin-amd64: ""
+    darwin-arm64: 8799a66d5a3292776ced60e068244d87cf38f8b6b8169de4400202ad4e006ac2
+
+bw:
+  source: bitwarden/clients
+  version: 2026.2.0
+  binary: bw
+  asset_template: "https://example.test/{source}/releases/download/cli-v{version}/bw-{os}-{arch}-{version}.zip"
+  os_map:
+    darwin: macos
+  checksums:
+    linux-amd64: de866852cd0c94bdcb00e2142692a28ca81d0b2fbdc7b8f2d3287fb624e7541c
+    linux-arm64: ""
+    darwin-amd64: ""
+    darwin-arm64: de866852cd0c94bdcb00e2142692a28ca81d0b2fbdc7b8f2d3287fb624e7541c

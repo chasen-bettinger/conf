@@ -17,6 +17,14 @@ brew_install() {
     fi
 }
 
+gh_binary_install() {
+    local pkg="$1"
+    if ! command -v "$pkg" &> /dev/null; then
+        echo "Missing $pkg.. installing $pkg..."
+        "$REPO_DIR/gh_install" "$pkg"
+    fi
+}
+
 link_file() {
     local src="$1"
     local dest="$2"
@@ -62,16 +70,12 @@ brew_install atuin
 brew_install nono
 brew_install gh
 brew_install kubeconform
+brew_install yq
+brew_install bats-core
 
-if ! command -v bw &> /dev/null; then
-    echo "Missing bw.. installing bitwarden cli..."
-    "$REPO_DIR/add-bw"
-fi
-
-if ! command -v gitleaks &> /dev/null; then
-    echo "Missing gitleaks.. installing gitleaks..."
-    "$REPO_DIR/add-gitleaks"
-fi
+gh_binary_install bw
+gh_binary_install gitleaks
+gh_binary_install betterleaks
 
 # Create chasen-learnings directory for knowledge notes
 if [ ! -d "$HOME/Documents/chasen-learnings" ]; then

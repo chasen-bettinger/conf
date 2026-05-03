@@ -1,0 +1,49 @@
+betterleaks:
+  source: betterleaks/betterleaks
+  version: 1.1.2
+  binary: betterleaks
+  asset_template: https://github.com/{source}/releases/download/v{version}/betterleaks_{version}_{os}_{arch}.tar.gz
+  arch_map:
+    amd64: x64
+  checksums_template: https://github.com/{source}/releases/download/v{version}/checksums.txt
+  checksums:
+    linux-amd64: 648c20617178065072ff1791d383192a62c911d9b4427f0426a8c504a6d9ddad
+    linux-arm64: 4d73dcbfe38c38878ee69e82b5aaa539398be8331f62b5640eb214ac04d890b0
+    darwin-amd64: d51904879ed77fabad157ec67cb8dd3f5548e975fc32082e6abc30a026e1bec1
+    darwin-arm64: 19cc2298463d7abf0aee9a03208a49834ab2e6f8411781c4cf1360827b3ded36
+gitleaks:
+  source: gitleaks/gitleaks
+  version: 8.16.4
+  binary: gitleaks
+  asset_template: "https://github.com/{source}/releases/download/v{version}/gitleaks_{version}_{os}_{arch}.tar.gz"
+  arch_map:
+    amd64: x64
+  checksums_template: "https://github.com/{source}/releases/download/v{version}/gitleaks_{version}_checksums.txt"
+  checksums:
+    linux-amd64: 4166458d288be6453a9485665b8b5e6a50e6e29300207eb84fcb375c6b32702e
+    linux-arm64: 5898566f11245cd5f20fc75995ac64a9af18f8a621b553e45f9001d2f36e21a1
+    darwin-amd64: 14328476a047d79d1a1159b100b0617479928a313584dbe02865fef2bae7d17b
+    darwin-arm64: 4ac90876951f79341a76c61e847394c25895a5c5bbf316453757f7b48651b869
+bw:
+  source: bitwarden/clients
+  version: 2026.2.0
+  binary: bw
+  # Default fits darwin-arm64 only (the only platform where bitwarden includes the arch in the filename).
+  asset_template: "https://github.com/{source}/releases/download/cli-v{version}/bw-{os}-{arch}-{version}.zip"
+  asset_template_overrides:
+    # Linux + intel-mac assets omit the {arch} segment.
+    linux-amd64: "https://github.com/{source}/releases/download/cli-v{version}/bw-{os}-{version}.zip"
+    darwin-amd64: "https://github.com/{source}/releases/download/cli-v{version}/bw-{os}-{version}.zip"
+    # No published linux-arm64 build at the time of writing; populate when bitwarden ships one.
+    linux-arm64: ""
+  os_map:
+    darwin: macos
+  # Bitwarden doesn't publish a checksums file alongside the CLI release.
+  # Opt in to local hashing so get_checksums can populate hashes by downloading the asset.
+  # Trust caveat: registry hashes for this entry come from our local download, not upstream.
+  local_checksums_fallback: true
+  checksums:
+    linux-amd64: "8d73e2a471993db8b2e6e4f69293a71e28e9b4c2cb4b696665f5f396126e1850"
+    linux-arm64: ""
+    darwin-amd64: 60cc5109b1cdad560231e02098f1ab2d16efa821d51c6ec089cb5c3cc351b2e5
+    darwin-arm64: 63c736b74620280e422ce238bdbcbc267689a0ff831168959ef2124588fcc1e5

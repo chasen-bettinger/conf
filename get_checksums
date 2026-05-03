@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REGISTRY="${GH_INSTALL_REGISTRY:-${SCRIPT_DIR}/binaries.yaml}"
+
+if ! command -v yq >/dev/null 2>&1; then
+    echo "Error: yq is required. Install with 'brew install yq' or 'apt install yq'." >&2
+    exit 1
+fi
+if ! command -v curl >/dev/null 2>&1; then
+    echo "Error: curl is required." >&2
+    exit 1
+fi
+if [[ ! -f "$REGISTRY" ]]; then
+    echo "Error: registry not found at $REGISTRY" >&2
+    exit 1
+fi
+
+PLATFORMS=(linux-amd64 linux-arm64 darwin-amd64 darwin-arm64)
+
+# Returns the resolved asset URL for a given key/os/arch, honoring
+# asset_template_overrides. Empty stdout = platform unsupported (skip silently).
+resolve_url() {
+    local key="$1" os="$2" arch="$3"
+    local platform="${os}-${arch}"
+    local override template
+
+    override=$(BINARY_KEY="$key" PLATFORM="$platform" yq \
+        '.[strenv(BINARY_KEY)].asset_template_overrides[strenv(PLATFORM)]' "$REGISTRY")
+    if [[ "$override" == "null" ]]; then
+        template=$(BINARY_KEY="$key" yq '.[strenv(BINARY_KEY)].asset_template' "$REGISTRY")
+    elif [[ -z "$override" ]]; then
+        return 0  # silently unsupported
+    else
+        template="$override"
+    fi
+
+    local source version os_token arch_token url
+    source=$(BINARY_KEY="$key" yq '.[strenv(BINARY_KEY)].source' "$REGISTRY")
+    version=$(BINARY_KEY="$key" yq '.[strenv(BINARY_KEY)].version' "$REGISTRY")
+    os_token=$(BINARY_KEY="$key" OS_K="$os"     yq '.[strenv(BINARY_KEY)].os_map[strenv(OS_K)]   // strenv(OS_K)'   "$REGISTRY")
+    arch_token=$(BINARY_KEY="$key" ARCH_K="$arch" yq '.[strenv(BINARY_KEY)].arch_map[strenv(ARCH_K)] // strenv(ARCH_K)' "$REGISTRY")
+
+    url="$template"
+    url="${url//\{source\}/$source}"
+    url="${url//\{version\}/$version}"
+    url="${url//\{os\}/$os_token}"
+    url="${url//\{arch\}/$arch_token}"
+    echo "$url"
+}
+
+# Looks up checksums_template for a key, with {source}/{version} substituted.
+# Empty stdout = no template configured.
+resolve_checksums_template_url() {
+    local key="$1"
+    local raw
+    raw=$(BINARY_KEY="$key" yq '.[strenv(BINARY_KEY)].checksums_template' "$REGISTRY")
+    if [[ "$raw" == "null" || -z "$raw" ]]; then
+        return 0
+    fi
+    local source version url
+    source=$(BINARY_KEY="$key" yq '.[strenv(BINARY_KEY)].source' "$REGISTRY")
+    version=$(BINARY_KEY="$key" yq '.[strenv(BINARY_KEY)].version' "$REGISTRY")
+    url="$raw"
+    url="${url//\{source\}/$source}"
+    url="${url//\{version\}/$version}"
+    echo "$url"
+}
+
+processed=0
+hashes_written=0
+warnings=0
+
+mapfile -t BINARY_KEYS < <(yq 'keys | .[]' "$REGISTRY")
+
+for key in "${BINARY_KEYS[@]}"; do
+    processed=$((processed + 1))
+    echo "Processing ${key}..."
+
+    unset platform_url platform_hash
+    declare -A platform_url
+    declare -A platform_hash
+    active_platforms=()
+
+    for platform in "${PLATFORMS[@]}"; do
+        os="${platform%-*}"
+        arch="${platform#*-}"
+        url=$(resolve_url "$key" "$os" "$arch")
+        if [[ -z "$url" ]]; then
+            continue
+        fi
+        platform_url[$platform]="$url"
+        platform_hash[$platform]=""
+        active_platforms+=("$platform")
+    done
+
+    if [[ ${#active_platforms[@]} -eq 0 ]]; then
+        echo "  no supported platforms for ${key}"
+        continue
+    fi
+
+    aggregate_content=""
+    aggregate_source=""
+
+    # checksums_template short-circuits the default search
+    templated_url=$(resolve_checksums_template_url "$key" || true)
+    if [[ -n "$templated_url" ]]; then
+        if content=$(curl -fsSL "$templated_url" 2>/dev/null); then
+            aggregate_content="$content"
+            aggregate_source="checksums_template"
+        else
+            echo "  warn: failed to fetch checksums_template URL for ${key}: ${templated_url}"
+            warnings=$((warnings + 1))
+        fi
+    else
+        # Default search: per-asset .sha256 sidecars first
+        for platform in "${active_platforms[@]}"; do
+            url="${platform_url[$platform]}"
+            if hash_content=$(curl -fsSL "${url}.sha256" 2>/dev/null); then
+                hash=$(echo "$hash_content" | awk '{print $1}' | head -1)
+                if [[ -n "$hash" ]]; then
+                    platform_hash[$platform]="$hash"
+                fi
+            fi
+        done
+
+        # Aggregate fallback
+        needs_aggregate=false
+        for platform in "${active_platforms[@]}"; do
+            if [[ -z "${platform_hash[$platform]}" ]]; then
+                needs_aggregate=true
+                break
+            fi
+        done
+
+        if $needs_aggregate; then
+            sample_url="${platform_url[${active_platforms[0]}]}"
+            base="${sample_url%/*}"
+            for candidate in "${base}/SHA256SUMS" "${base}/checksums.txt"; do
+                if content=$(curl -fsSL "$candidate" 2>/dev/null); then
+                    if [[ -n "$content" ]]; then
+                        aggregate_content="$content"
+                        aggregate_source="$candidate"
+                        break
+                    fi
+                fi
+            done
+        fi
+    fi
+
+    # Parse aggregate (if any) for unfilled platforms
+    if [[ -n "$aggregate_content" ]]; then
+        for platform in "${active_platforms[@]}"; do
+            [[ -n "${platform_hash[$platform]}" ]] && continue
+            url="${platform_url[$platform]}"
+            filename="${url##*/}"
+            hash=$(echo "$aggregate_content" | awk -v fn="$filename" -v fn2="*$filename" \
+                '$2 == fn || $2 == fn2 {print $1; exit}')
+            if [[ -n "$hash" ]]; then
+                platform_hash[$platform]="$hash"
+            fi
+        done
+    fi
+
+    # Opt-in local hash fallback for any platform still without a hash
+    local_fallback=$(BINARY_KEY="$key" yq '.[strenv(BINARY_KEY)].local_checksums_fallback // false' "$REGISTRY")
+    if [[ "$local_fallback" == "true" ]]; then
+        for platform in "${active_platforms[@]}"; do
+            [[ -n "${platform_hash[$platform]}" ]] && continue
+            url="${platform_url[$platform]}"
+            tmpfile=$(mktemp)
+            if curl -fsSL -o "$tmpfile" "$url" 2>/dev/null; then
+                if command -v sha256sum >/dev/null 2>&1; then
+                    hash=$(sha256sum "$tmpfile" | awk '{print $1}')
+                else
+                    hash=$(shasum -a 256 "$tmpfile" | awk '{print $1}')
+                fi
+                platform_hash[$platform]="$hash"
+                echo "  computed locally ${key}/${platform} (asset: ${url##*/})"
+            else
+                echo "  warn: local hash fallback for ${key}/${platform}: download failed (${url})"
+                warnings=$((warnings + 1))
+            fi
+            rm -f "$tmpfile"
+        done
+    fi
+
+    # Write hashes back, count warnings
+    found_any=false
+    for platform in "${active_platforms[@]}"; do
+        hash="${platform_hash[$platform]}"
+        if [[ -n "$hash" ]]; then
+            BINARY_KEY="$key" PLATFORM="$platform" HASH="$hash" \
+                yq -i '.[strenv(BINARY_KEY)].checksums[strenv(PLATFORM)] = strenv(HASH)' "$REGISTRY"
+            hashes_written=$((hashes_written + 1))
+            found_any=true
+        else
+            echo "  warn: no checksum found for ${key}/${platform} (asset: ${platform_url[$platform]##*/})"
+            warnings=$((warnings + 1))
+        fi
+    done
+
+    if ! $found_any; then
+        echo "  warn: no checksums found for ${key}"
+        warnings=$((warnings + 1))
+    fi
+done
+
+echo
+echo "Summary: ${processed} binaries processed, ${hashes_written} hashes written, ${warnings} warnings"
