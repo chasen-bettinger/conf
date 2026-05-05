@@ -41,6 +41,8 @@ alias gsp='git stash pop'
 alias gst='git stash'
 alias grbo='git checkout --ours . && ga . && git rebase --continue'
 alias grbt='git checkout --theirs . && ga . && git rebase --continue'
+alias gwl='git worktree list'
+alias gwp='git worktree prune'
 alias k='kubectl'
 alias app='kubectl -n app'
 alias cfc='kubectl -n "cloudflare-controller"'
@@ -133,3 +135,6 @@ atuin sync || true
 echo "Sourcing local zshrc..."
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 echo "Sourcing local complete..."
+
+export UV_INDEX_GITLAB_USERNAME=$GITLAB_USERNAME
+export UV_INDEX_GITLAB_PASSWORD=$GITLAB_TOKEN
