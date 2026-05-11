@@ -72,6 +72,7 @@ brew_install gh
 brew_install kubeconform
 brew_install yq
 brew_install bats-core
+brew_install pnpm
 
 gh_binary_install bw
 gh_binary_install gitleaks
