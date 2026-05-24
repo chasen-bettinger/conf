@@ -5,6 +5,7 @@
 
 common_setup() {
     REPO_DIR="$(cd "$(dirname "${BATS_TEST_FILENAME}")/.." && pwd)"
+    SCRIPTS_DIR="${REPO_DIR}/scripts"
     FIXTURES_DIR="${REPO_DIR}/tests/fixtures"
 
     TEST_TMP="$(mktemp -d)"

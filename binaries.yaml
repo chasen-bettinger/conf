@@ -47,3 +47,19 @@ bw:
     linux-arm64: ""
     darwin-amd64: 60cc5109b1cdad560231e02098f1ab2d16efa821d51c6ec089cb5c3cc351b2e5
     darwin-arm64: 63c736b74620280e422ce238bdbcbc267689a0ff831168959ef2124588fcc1e5
+starship:
+  source: starship/starship
+  version: 1.25.0
+  binary: starship
+  asset_template: "https://github.com/{source}/releases/download/v{version}/starship-{arch}-{os}.tar.gz"
+  os_map:
+    darwin: apple-darwin
+    linux: unknown-linux-gnu
+  arch_map:
+    arm64: aarch64
+    amd64: X86_64
+  checksums:
+    linux-amd64: "025a6540717a20d2545410c0108caf216a6a14ab2cce91a473d91ed42762bc6b"
+    linux-arm64: ""
+    darwin-amd64: 05421bfc05ed00394ec4a7ea20213bd9920b2858713cbe1ddf257ebcebf5da88
+    darwin-arm64: 365301b5f4938322a9f378764b4bc640048bca7d6ac28eaabd406cadd6fc703a

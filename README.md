@@ -5,7 +5,7 @@ My machine-config repo. Holds dotfiles, install scripts, and a small registry-dr
 ## Quick start
 
 ```sh
-./init.sh
+./init
 ```
 
 Symlinks `.zshrc` and `CLAUDE.md` into place, installs Homebrew packages (`atuin`, `nono`, `gh`, `kubeconform`, `yq`, `bats-core`), clones oh-my-zsh plugins listed in `oh-my-zsh-plugins/plugins.txt`, and runs `gh_install bw` and `gh_install gitleaks` if those binaries aren't already present.

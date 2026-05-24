@@ -1,9 +1,8 @@
-#!/usr/bin/env zsh 
+#!/usr/bin/env zsh
 set -e
 
-echo "\$0 :>> $0"
-
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPTS_DIR="$(cd "$(dirname "$0")/scripts" && pwd)"
 ZSHRC_SOURCE="$REPO_DIR/.zshrc"
 ZSHRC_TARGET="$HOME/.zshrc"
 PLUGINS_FILE="$REPO_DIR/oh-my-zsh-plugins/plugins.txt"
@@ -21,7 +20,7 @@ gh_binary_install() {
     local pkg="$1"
     if ! command -v "$pkg" &> /dev/null; then
         echo "Missing $pkg.. installing $pkg..."
-        "$REPO_DIR/gh_install" "$pkg"
+        "$SCRIPTS_DIR/gh_install" "$pkg"
     fi
 }
 
@@ -60,12 +59,6 @@ if [ -f "$PLUGINS_FILE" ]; then
     done < "$PLUGINS_FILE"
 fi
 
-
-if [ ! -f "$STARSHIP_CONFIG" ]; then
-    echo "Missing startship config.. installing starship..."
-    curl -sS https://starship.rs/install.sh | sh -s -- -y > /dev/null 2>&1
-fi
-
 brew_install atuin
 brew_install nono
 brew_install gh
@@ -78,6 +71,7 @@ brew_install ripgrep
 gh_binary_install bw
 gh_binary_install gitleaks
 gh_binary_install betterleaks
+gh_binary_install starship
 
 # Create chasen-learnings directory for knowledge notes
 if [ ! -d "$HOME/Documents/chasen-learnings" ]; then

@@ -15,7 +15,7 @@ teardown() { common_teardown; }
     # Force aggregate-file fallback to fail so only sidecars succeed
     export MOCK_CURL_DENY=$'SHA256SUMS\nchecksums.txt'
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     # All 4 gitleaks platforms got hashes
@@ -32,7 +32,7 @@ teardown() { common_teardown; }
 @test "get_checksums: falls back to SHA256SUMS aggregate when no .sha256 sidecars" {
     export MOCK_CURL_DENY=$'.sha256\nchecksums.txt'
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     [ "$(yq '.gitleaks.checksums."linux-amd64"'  "$GH_INSTALL_REGISTRY")" = "8799a66d5a3292776ced60e068244d87cf38f8b6b8169de4400202ad4e006ac2" ]
@@ -43,7 +43,7 @@ teardown() { common_teardown; }
 @test "get_checksums: falls back to checksums.txt when no .sha256 and no SHA256SUMS" {
     export MOCK_CURL_DENY=$'.sha256\nSHA256SUMS'
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     [ "$(yq '.bw.checksums."linux-amd64"'  "$GH_INSTALL_REGISTRY")" = "de866852cd0c94bdcb00e2142692a28ca81d0b2fbdc7b8f2d3287fb624e7541c" ]
@@ -56,7 +56,7 @@ teardown() { common_teardown; }
     yq -i '.gitleaks.checksums."linux-amd64" = "STALE_VALUE_PRESERVED"' "$GH_INSTALL_REGISTRY"
     export MOCK_CURL_DENY=$'.sha256\nSHA256SUMS\nchecksums.txt'
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     grep -q 'no checksums found' <<<"$output"
@@ -70,7 +70,7 @@ teardown() { common_teardown; }
     # Strip bw to keep this test focused on gitleaks
     yq -i 'del(.bw)' "$GH_INSTALL_REGISTRY"
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     # All four gitleaks platforms got the hash
@@ -91,7 +91,7 @@ teardown() { common_teardown; }
     yq -i 'del(.bw)' "$GH_INSTALL_REGISTRY"
     export MOCK_CURL_DENY=$'.sha256\nchecksums.txt'
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     # No warning for the silently-skipped platform
@@ -111,7 +111,7 @@ teardown() { common_teardown; }
     expected_darwin_x64=$(sha256sum   "${FIXTURES_DIR}/gitleaks_8.16.4_darwin_x64.tar.gz"   | awk '{print $1}')
     expected_darwin_arm64=$(sha256sum "${FIXTURES_DIR}/gitleaks_8.16.4_darwin_arm64.tar.gz" | awk '{print $1}')
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     [ "$(yq '.gitleaks.checksums."linux-amd64"'  "$GH_INSTALL_REGISTRY")" = "$expected_linux_x64" ]
@@ -134,7 +134,7 @@ teardown() { common_teardown; }
     expected_linux_arm64=$(sha256sum "${FIXTURES_DIR}/gitleaks_8.16.4_linux_arm64.tar.gz" | awk '{print $1}')
     expected_darwin_x64=$(sha256sum  "${FIXTURES_DIR}/gitleaks_8.16.4_darwin_x64.tar.gz"  | awk '{print $1}')
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     [ "$(yq '.gitleaks.checksums."linux-amd64"'  "$GH_INSTALL_REGISTRY")" = "$expected_linux_x64" ]
@@ -150,7 +150,7 @@ teardown() { common_teardown; }
     yq -i '.gitleaks.checksums."linux-amd64" = "STALE_PRESERVED"' "$GH_INSTALL_REGISTRY"
     export MOCK_CURL_DENY=$'.sha256\nSHA256SUMS\nchecksums.txt'
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     # Stale value preserved (script never tried to download the asset)
@@ -173,7 +173,7 @@ EOF
     # Pre-populate gitleaks darwin-arm64 with a known prior value
     yq -i '.gitleaks.checksums."darwin-arm64" = "PRIOR_VALUE_KEPT"' "$GH_INSTALL_REGISTRY"
 
-    run "${REPO_DIR}/get_checksums"
+    run "${SCRIPTS_DIR}/get_checksums"
     [ "$status" -eq 0 ]
 
     [ "$(yq '.gitleaks.checksums."linux-amd64"'  "$GH_INSTALL_REGISTRY")" = "8799a66d5a3292776ced60e068244d87cf38f8b6b8169de4400202ad4e006ac2" ]

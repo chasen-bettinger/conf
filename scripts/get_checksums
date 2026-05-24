@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REGISTRY="${GH_INSTALL_REGISTRY:-${SCRIPT_DIR}/binaries.yaml}"
+REGISTRY="${GH_INSTALL_REGISTRY:-${SCRIPT_DIR}/../binaries.yaml}"
 
 if ! command -v yq >/dev/null 2>&1; then
     echo "Error: yq is required. Install with 'brew install yq' or 'apt install yq'." >&2
@@ -68,24 +68,23 @@ resolve_checksums_template_url() {
     echo "$url"
 }
 
-processed=0
-hashes_written=0
-warnings=0
+MAX_JOBS="${MAX_JOBS:-4}"
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
 
-mapfile -t BINARY_KEYS < <(yq 'keys | .[]' "$REGISTRY")
+fetch_checksums_for_binary() {
+    local key="$1"
+    local result_file="${WORK_DIR}/${key}.result"
+    local log_file="${WORK_DIR}/${key}.log"
 
-for key in "${BINARY_KEYS[@]}"; do
-    processed=$((processed + 1))
-    echo "Processing ${key}..."
-
-    unset platform_url platform_hash
     declare -A platform_url
     declare -A platform_hash
-    active_platforms=()
+    local active_platforms=()
 
     for platform in "${PLATFORMS[@]}"; do
-        os="${platform%-*}"
-        arch="${platform#*-}"
+        local os="${platform%-*}"
+        local arch="${platform#*-}"
+        local url
         url=$(resolve_url "$key" "$os" "$arch")
         if [[ -z "$url" ]]; then
             continue
@@ -96,28 +95,28 @@ for key in "${BINARY_KEYS[@]}"; do
     done
 
     if [[ ${#active_platforms[@]} -eq 0 ]]; then
-        echo "  no supported platforms for ${key}"
-        continue
+        echo "  no supported platforms for ${key}" >> "$log_file"
+        echo "hashes=0 warnings=0" > "$result_file"
+        return
     fi
 
-    aggregate_content=""
-    aggregate_source=""
+    local aggregate_content=""
 
-    # checksums_template short-circuits the default search
+    local templated_url
     templated_url=$(resolve_checksums_template_url "$key" || true)
     if [[ -n "$templated_url" ]]; then
+        local content
         if content=$(curl -fsSL "$templated_url" 2>/dev/null); then
             aggregate_content="$content"
-            aggregate_source="checksums_template"
         else
-            echo "  warn: failed to fetch checksums_template URL for ${key}: ${templated_url}"
-            warnings=$((warnings + 1))
+            echo "  warn: failed to fetch checksums_template URL for ${key}: ${templated_url}" >> "$log_file"
         fi
     else
-        # Default search: per-asset .sha256 sidecars first
         for platform in "${active_platforms[@]}"; do
-            url="${platform_url[$platform]}"
+            local url="${platform_url[$platform]}"
+            local hash_content
             if hash_content=$(curl -fsSL "${url}.sha256" 2>/dev/null); then
+                local hash
                 hash=$(echo "$hash_content" | awk '{print $1}' | head -1)
                 if [[ -n "$hash" ]]; then
                     platform_hash[$platform]="$hash"
@@ -125,8 +124,7 @@ for key in "${BINARY_KEYS[@]}"; do
             fi
         done
 
-        # Aggregate fallback
-        needs_aggregate=false
+        local needs_aggregate=false
         for platform in "${active_platforms[@]}"; do
             if [[ -z "${platform_hash[$platform]}" ]]; then
                 needs_aggregate=true
@@ -135,13 +133,13 @@ for key in "${BINARY_KEYS[@]}"; do
         done
 
         if $needs_aggregate; then
-            sample_url="${platform_url[${active_platforms[0]}]}"
-            base="${sample_url%/*}"
+            local sample_url="${platform_url[${active_platforms[0]}]}"
+            local base="${sample_url%/*}"
+            local content
             for candidate in "${base}/SHA256SUMS" "${base}/checksums.txt"; do
                 if content=$(curl -fsSL "$candidate" 2>/dev/null); then
                     if [[ -n "$content" ]]; then
                         aggregate_content="$content"
-                        aggregate_source="$candidate"
                         break
                     fi
                 fi
@@ -149,12 +147,12 @@ for key in "${BINARY_KEYS[@]}"; do
         fi
     fi
 
-    # Parse aggregate (if any) for unfilled platforms
     if [[ -n "$aggregate_content" ]]; then
         for platform in "${active_platforms[@]}"; do
             [[ -n "${platform_hash[$platform]}" ]] && continue
-            url="${platform_url[$platform]}"
-            filename="${url##*/}"
+            local url="${platform_url[$platform]}"
+            local filename="${url##*/}"
+            local hash
             hash=$(echo "$aggregate_content" | awk -v fn="$filename" -v fn2="*$filename" \
                 '$2 == fn || $2 == fn2 {print $1; exit}')
             if [[ -n "$hash" ]]; then
@@ -163,47 +161,94 @@ for key in "${BINARY_KEYS[@]}"; do
         done
     fi
 
-    # Opt-in local hash fallback for any platform still without a hash
+    local local_fallback
     local_fallback=$(BINARY_KEY="$key" yq '.[strenv(BINARY_KEY)].local_checksums_fallback // false' "$REGISTRY")
     if [[ "$local_fallback" == "true" ]]; then
         for platform in "${active_platforms[@]}"; do
             [[ -n "${platform_hash[$platform]}" ]] && continue
-            url="${platform_url[$platform]}"
+            local url="${platform_url[$platform]}"
+            local tmpfile
             tmpfile=$(mktemp)
             if curl -fsSL -o "$tmpfile" "$url" 2>/dev/null; then
+                local hash
                 if command -v sha256sum >/dev/null 2>&1; then
                     hash=$(sha256sum "$tmpfile" | awk '{print $1}')
                 else
                     hash=$(shasum -a 256 "$tmpfile" | awk '{print $1}')
                 fi
                 platform_hash[$platform]="$hash"
-                echo "  computed locally ${key}/${platform} (asset: ${url##*/})"
+                echo "  computed locally ${key}/${platform} (asset: ${url##*/})" >> "$log_file"
             else
-                echo "  warn: local hash fallback for ${key}/${platform}: download failed (${url})"
-                warnings=$((warnings + 1))
+                echo "  warn: local hash fallback for ${key}/${platform}: download failed (${url})" >> "$log_file"
             fi
             rm -f "$tmpfile"
         done
     fi
 
-    # Write hashes back, count warnings
-    found_any=false
+    local local_hashes=0
+    local local_warnings=0
+    local found_any=false
+
     for platform in "${active_platforms[@]}"; do
-        hash="${platform_hash[$platform]}"
+        local hash="${platform_hash[$platform]}"
         if [[ -n "$hash" ]]; then
-            BINARY_KEY="$key" PLATFORM="$platform" HASH="$hash" \
-                yq -i '.[strenv(BINARY_KEY)].checksums[strenv(PLATFORM)] = strenv(HASH)' "$REGISTRY"
-            hashes_written=$((hashes_written + 1))
+            echo "${platform}=${hash}" >> "$result_file.hashes"
+            local_hashes=$((local_hashes + 1))
             found_any=true
         else
-            echo "  warn: no checksum found for ${key}/${platform} (asset: ${platform_url[$platform]##*/})"
-            warnings=$((warnings + 1))
+            echo "  warn: no checksum found for ${key}/${platform} (asset: ${platform_url[$platform]##*/})" >> "$log_file"
+            local_warnings=$((local_warnings + 1))
         fi
     done
 
     if ! $found_any; then
-        echo "  warn: no checksums found for ${key}"
-        warnings=$((warnings + 1))
+        echo "  warn: no checksums found for ${key}" >> "$log_file"
+        local_warnings=$((local_warnings + 1))
+    fi
+
+    echo "hashes=${local_hashes} warnings=${local_warnings}" > "$result_file"
+}
+
+mapfile -t BINARY_KEYS < <(yq 'keys | .[]' "$REGISTRY")
+
+for key in "${BINARY_KEYS[@]}"; do
+    echo "Processing ${key}..."
+    fetch_checksums_for_binary "$key" &
+
+    while (( $(jobs -r | wc -l) >= MAX_JOBS )); do
+        wait -n 2>/dev/null || true
+    done
+done
+wait
+
+processed=0
+hashes_written=0
+warnings=0
+
+for key in "${BINARY_KEYS[@]}"; do
+    processed=$((processed + 1))
+    local_result="${WORK_DIR}/${key}.result"
+    local_log="${WORK_DIR}/${key}.log"
+    local_hashes="${WORK_DIR}/${key}.result.hashes"
+
+    if [[ -f "$local_log" ]]; then
+        cat "$local_log"
+    fi
+
+    if [[ -f "$local_hashes" ]]; then
+        while IFS='=' read -r platform hash; do
+            BINARY_KEY="$key" PLATFORM="$platform" HASH="$hash" \
+                yq -i '.[strenv(BINARY_KEY)].checksums[strenv(PLATFORM)] = strenv(HASH)' "$REGISTRY"
+        done < "$local_hashes"
+    fi
+
+    if [[ -f "$local_result" ]]; then
+        read -r counts < "$local_result"
+        h="${counts#hashes=}"
+        h="${h%% *}"
+        w="${counts##*warnings=}"
+        hashes_written=$((hashes_written + h))
+        warnings=$((warnings + w))
     fi
 done
 
