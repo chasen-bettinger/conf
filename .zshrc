@@ -135,7 +135,7 @@ atuin sync || true
 
 echo "Sourcing local zshrc..."
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
-echo "Sourcing local complete..."
+echo "Sourcing local zshrc complete..."
 
 export UV_INDEX_GITLAB_USERNAME=$GITLAB_USERNAME
 export UV_INDEX_GITLAB_PASSWORD=$GITLAB_TOKEN
@@ -148,4 +148,5 @@ case ":$PATH:" in
 esac
 # pnpm end
 
+echo "Updating claude code to latest..."
 claude update || true
