@@ -3,8 +3,7 @@ set -e
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPTS_DIR="$(cd "$(dirname "$0")/scripts" && pwd)"
-ZSHRC_SOURCE="$REPO_DIR/.zshrc"
-ZSHRC_TARGET="$HOME/.zshrc"
+
 PLUGINS_FILE="$REPO_DIR/oh-my-zsh-plugins/plugins.txt"
 CUSTOM_PLUGINS_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
 STARSHIP_CONFIG="$HOME/.config/starship.toml"
@@ -38,6 +37,8 @@ link_file() {
     echo "Symlinked $dest → $src"
 }
 
+ZSHRC_SOURCE="$REPO_DIR/.zshrc"
+ZSHRC_TARGET="$HOME/.zshrc"
 CLAUDE_MD_SOURCE="$REPO_DIR/CLAUDE.md"
 CLAUDE_MD_TARGET="$HOME/.claude/CLAUDE.md"
 
@@ -67,6 +68,7 @@ brew_install yq
 brew_install bats-core
 brew_install pnpm
 brew_install ripgrep
+brew_install glab
 
 gh_binary_install bw
 gh_binary_install gitleaks
