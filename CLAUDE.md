@@ -125,3 +125,5 @@
 - Be partial to failing fast and as close to the top of the function as possible. Let users know early why the program has crashed.
 - Always be explicit in error returns.
 - Every error should be actionable to the user. If the user cannot take action based on the error's message, it's a shit error message.
+
+@RTK.md

@@ -17,6 +17,7 @@ alias gph='git push'
 alias gphnb='git push -u origin'
 alias gpl='git pull'
 alias gco='git checkout'
+alias ma='gco main && gpl'
 alias climy='winpty mysql.exe -u root -ppassword'
 alias gdee='git diff \*ee'
 alias gnb='git checkout -b'
@@ -51,7 +52,7 @@ alias kctx='kubectl config use-context'
 alias aws-who='aws iam list-account-aliases --output json |  jq ".AccountAliases"'
 alias rmk8saws='rm ~/.kube/config ~/.aws/credentials'
 alias gitleaks_scan='gitleaks detect --log-opts="--all" -f "json" -r "./gitleaks.json"'
-alias clc='claude --dangerously-skip-permissions'
+alias clc='headroom wrap claude -- --dangerously-skip-permissions'
 alias os='openspec'
 
 # RESET DATABASES
@@ -150,3 +151,6 @@ esac
 
 echo "Updating claude code to latest..."
 claude update || true
+
+# bun completions
+[ -s "/Users/chasen/.bun/_bun" ] && source "/Users/chasen/.bun/_bun"
