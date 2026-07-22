@@ -23,6 +23,69 @@ gh_binary_install() {
     fi
 }
 
+# Upgrades a pip-installed CLI to the newest release that is at least
+# $min_age_days old, so a fresh-off-the-press version never gets pulled in
+# automatically. Resolves the python/pip that owns $cmd via its shebang,
+# so this hits the right pyenv version instead of whatever python3 is on PATH.
+pip_upgrade_stable() {
+    local cmd="$1"
+    local pkg="$2"
+    local min_age_days="${3:-7}"
+    local cmd_path py
+
+    if cmd_path=$(command -v "$cmd" 2>/dev/null); then
+        py="$(head -1 "$cmd_path" | sed 's/^#!//')"
+    else
+        py="python3"
+    fi
+
+    local result current target
+    result=$("$py" - "$pkg" "$min_age_days" <<'PY' 2>/dev/null
+import json, sys, urllib.request
+from datetime import datetime, timedelta, timezone
+from importlib import metadata
+
+pkg, min_age_days = sys.argv[1], int(sys.argv[2])
+
+try:
+    current = metadata.version(pkg)
+except metadata.PackageNotFoundError:
+    current = None
+
+with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/json", timeout=10) as r:
+    data = json.load(r)
+
+cutoff = datetime.now(timezone.utc) - timedelta(days=min_age_days)
+best_version, best_time = None, None
+for version, files in data["releases"].items():
+    times = [f["upload_time_iso_8601"] for f in files if not f.get("yanked")]
+    if not times:
+        continue
+    uploaded = max(datetime.fromisoformat(t.replace("Z", "+00:00")) for t in times)
+    if uploaded <= cutoff and (best_time is None or uploaded > best_time):
+        best_time, best_version = uploaded, version
+
+if best_version is None:
+    sys.exit(0)
+
+# Never downgrade: only report a target when it's newer than what's installed.
+from pip._vendor.packaging.version import Version
+
+if current is None or Version(best_version) > Version(current):
+    print(f"{current or 'not installed'} {best_version}")
+PY
+) || true
+
+    if [ -z "$result" ]; then
+        return
+    fi
+
+    current="${result%% *}"
+    target="${result##* }"
+    echo "$current -> $target: updating $pkg (latest release ${min_age_days}+ days old)..."
+    "$py" -m pip install --quiet "$pkg==$target"
+}
+
 link_file() {
     local src="$1"
     local dest="$2"
@@ -74,6 +137,8 @@ gh_binary_install bw
 gh_binary_install gitleaks
 gh_binary_install betterleaks
 gh_binary_install starship
+
+pip_upgrade_stable headroom headroom-ai
 
 # Create chasen-learnings directory for knowledge notes
 if [ ! -d "$HOME/Documents/chasen-learnings" ]; then
