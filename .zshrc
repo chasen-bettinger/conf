@@ -53,6 +53,9 @@ alias aws-who='aws iam list-account-aliases --output json |  jq ".AccountAliases
 alias rmk8saws='rm ~/.kube/config ~/.aws/credentials'
 alias gitleaks_scan='gitleaks detect --log-opts="--all" -f "json" -r "./gitleaks.json"'
 alias clc='headroom wrap claude -- --dangerously-skip-permissions'
+alias clcl='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions'
+alias so='headroom wrap claude -- --dangerously-skip-permissions --model sonnet'
+alias sol='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions --model sonnet'
 alias os='openspec'
 
 # RESET DATABASES
@@ -149,8 +152,13 @@ case ":$PATH:" in
 esac
 # pnpm end
 
-echo "Updating claude code to latest..."
-claude update || true
+# ponytail: once-a-day claude update, guarded by a date-stamped file
+_clc_stamp="$HOME/.cache/claude-update-check"
+if [[ "$(cat "$_clc_stamp" 2>/dev/null)" != "$(date +%Y-%m-%d)" ]]; then
+  echo "Updating claude code to latest..."
+  claude update || true
+  mkdir -p "$(dirname "$_clc_stamp")" && date +%Y-%m-%d > "$_clc_stamp"
+fi
 
 # bun completions
 [ -s "/Users/chasen/.bun/_bun" ] && source "/Users/chasen/.bun/_bun"
