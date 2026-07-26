@@ -108,9 +108,57 @@ CLAUDE_MD_TARGET="$HOME/.claude/CLAUDE.md"
 link_file "$ZSHRC_SOURCE" "$ZSHRC_TARGET"
 link_file "$CLAUDE_MD_SOURCE" "$CLAUDE_MD_TARGET"
 
-SKILLS_SOURCE="$REPO_DIR/.claude/skills"
-SKILLS_TARGET="$HOME/.claude/skills"
-link_file "$SKILLS_SOURCE" "$SKILLS_TARGET"
+# Cross-repo skills live in conf/skills, grouped into category folders
+# (e.g. rails/, general/). conf/.claude/skills/openspec-* are separate:
+# those are this repo's own project skills, left untouched here.
+# Claude Code only discovers skills one level deep, so each skill below
+# gets its own symlink into a flat ~/.claude/skills. List category names
+# (one per line) in ~/.claude/skills.exclude to skip them on this machine.
+SKILLS_ROOT="$REPO_DIR/skills"
+SKILLS_TARGET_DIR="$HOME/.claude/skills"
+SKILLS_EXCLUDE_FILE="$HOME/.claude/skills.exclude"
+
+if [ -L "$SKILLS_TARGET_DIR" ]; then
+    rm "$SKILLS_TARGET_DIR"
+fi
+mkdir -p "$SKILLS_TARGET_DIR"
+
+if [ ! -f "$SKILLS_EXCLUDE_FILE" ]; then
+    echo "# One skill category per line to skip on this machine (e.g. rails)" > "$SKILLS_EXCLUDE_FILE"
+    echo "Created $SKILLS_EXCLUDE_FILE for per-machine skill exclusions"
+fi
+
+link_skills() {
+    setopt local_options nullglob
+    local excluded=()
+    while read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        excluded+=("$line")
+    done < "$SKILLS_EXCLUDE_FILE"
+
+    # Drop any conf-managed symlinks first, so skills removed from conf or
+    # newly excluded on this machine don't linger.
+    for entry in "$SKILLS_TARGET_DIR"/*; do
+        [ -L "$entry" ] || continue
+        case "$(readlink "$entry")" in
+            "$SKILLS_ROOT"/*) rm "$entry" ;;
+        esac
+    done
+
+    for category_dir in "$SKILLS_ROOT"/*/; do
+        local category
+        category="$(basename "$category_dir")"
+        if [[ " ${excluded[*]} " == *" $category "* ]]; then
+            echo "Skipping skill category: $category"
+            continue
+        fi
+        for skill_dir in "$category_dir"*/; do
+            [ -d "$skill_dir" ] || continue
+            link_file "${skill_dir%/}" "$SKILLS_TARGET_DIR/$(basename "$skill_dir")"
+        done
+    done
+}
+link_skills
 
 
 if [ -f "$PLUGINS_FILE" ]; then
