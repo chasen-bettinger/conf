@@ -54,8 +54,8 @@ alias rmk8saws='rm ~/.kube/config ~/.aws/credentials'
 alias gitleaks_scan='gitleaks detect --log-opts="--all" -f "json" -r "./gitleaks.json"'
 alias clc='headroom wrap claude -- --dangerously-skip-permissions'
 alias clcl='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions'
-alias so='headroom wrap claude -- --dangerously-skip-permissions --model sonnet'
-alias sol='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions --model sonnet'
+alias so='headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
+alias sol='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
 alias os='openspec'
 
 # RESET DATABASES

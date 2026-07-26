@@ -89,12 +89,12 @@ PY
 link_file() {
     local src="$1"
     local dest="$2"
-    if [ -f "$dest" ] && [ ! -L "$dest" ]; then
-        echo "Backing up existing $dest to $dest.backup"
-        mv "$dest" "$dest.backup"
-    elif [ -L "$dest" ]; then
+    if [ -L "$dest" ]; then
         echo "Removing existing symlink at $dest"
         rm "$dest"
+    elif [ -e "$dest" ]; then
+        echo "Backing up existing $dest to $dest.backup"
+        mv "$dest" "$dest.backup"
     fi
     ln -s "$src" "$dest"
     echo "Symlinked $dest → $src"
@@ -107,6 +107,10 @@ CLAUDE_MD_TARGET="$HOME/.claude/CLAUDE.md"
 
 link_file "$ZSHRC_SOURCE" "$ZSHRC_TARGET"
 link_file "$CLAUDE_MD_SOURCE" "$CLAUDE_MD_TARGET"
+
+SKILLS_SOURCE="$REPO_DIR/.claude/skills"
+SKILLS_TARGET="$HOME/.claude/skills"
+link_file "$SKILLS_SOURCE" "$SKILLS_TARGET"
 
 
 if [ -f "$PLUGINS_FILE" ]; then
