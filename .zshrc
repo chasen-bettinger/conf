@@ -57,6 +57,7 @@ alias clcl='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permi
 alias so='headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
 alias sol='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
 alias os='openspec'
+alias grep='rg'
 
 # RESET DATABASES
 alias resetmy='sudo docker container exec -i dev_db_1 mysql -u root -ppassword tib_dev_9101 < dump.sql'
