@@ -55,6 +55,7 @@ alias gitleaks_scan='gitleaks detect --log-opts="--all" -f "json" -r "./gitleaks
 alias clc='headroom wrap claude -- --dangerously-skip-permissions'
 alias clcl='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions'
 alias so='headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
+alias nhso='claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
 alias sol='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
 alias os='openspec'
 alias grep='rg'
