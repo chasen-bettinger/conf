@@ -225,5 +225,3 @@ less what its origin may grant.
 ## Shell & jq Conventions
 
 All jq programs must be lint-checked with `jq -n -f` or a dry run against sample JSON before use; avoid reserved words as variable names, use `@json` carefully, and never rebind loop variables. Validate glab/GraphQL output parses as JSON before acting on it, and check for pagination/rate-limit truncation on any sweep across projects.
-
-@RTK.md
