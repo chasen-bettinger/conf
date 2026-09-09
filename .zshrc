@@ -182,11 +182,6 @@ echo "Sourcing local zshrc..."
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 echo "Sourcing local zshrc complete..."
 
-export UV_INDEX_GITLAB_USERNAME=$GITLAB_USERNAME
-export UV_INDEX_GITLAB_PASSWORD=$GITLAB_TOKEN
-
-
-
 # ponytail: once-a-day claude update, guarded by a date-stamped file
 _clc_stamp="$HOME/.cache/claude-update-check"
 if [[ "$(cat "$_clc_stamp" 2>/dev/null)" != "$(date +%Y-%m-%d)" ]]; then
