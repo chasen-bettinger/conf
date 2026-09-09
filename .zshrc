@@ -185,13 +185,7 @@ echo "Sourcing local zshrc complete..."
 export UV_INDEX_GITLAB_USERNAME=$GITLAB_USERNAME
 export UV_INDEX_GITLAB_PASSWORD=$GITLAB_TOKEN
 
-# pnpm
-export PNPM_HOME="/Users/chasen.bettinger@getgarner.com/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
+
 
 # ponytail: once-a-day claude update, guarded by a date-stamped file
 _clc_stamp="$HOME/.cache/claude-update-check"
