@@ -184,6 +184,7 @@ brew_install bats-core
 brew_install pnpm
 brew_install ripgrep
 brew_install glab
+brew_install shellcheck
 
 gh_binary_install bw
 gh_binary_install gitleaks

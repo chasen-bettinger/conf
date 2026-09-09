@@ -59,6 +59,8 @@ alias nhso='claude --dangerously-skip-permissions --model "sonnet[1m]"'
 alias sol='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
 alias os='openspec'
 alias grep='rg'
+alias os='openspec'
+alias jsontidy="pbpaste | jq '.' | pbcopy"
 
 # RESET DATABASES
 alias resetmy='sudo docker container exec -i dev_db_1 mysql -u root -ppassword tib_dev_9101 < dump.sql'
@@ -126,6 +128,43 @@ function print-services() {
   for service in $services; do
     echo $service
   done
+}
+
+function git-revert-push() {
+  local target="${1:-HEAD}"
+
+  local branch
+  branch=$(git symbolic-ref --short HEAD 2>&1) || { echo "not on a branch: $branch" >&2; return 1; }
+  if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+    echo "refusing to revert directly on $branch; make a branch first" >&2
+    return 1
+  fi
+
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "working tree is dirty; commit or stash first" >&2
+    return 1
+  fi
+
+  local sha
+  sha=$(git rev-parse --short --verify "${target}^{commit}" 2>&1) || { echo "not a commit: $target" >&2; return 1; }
+
+  echo "revert on $branch: $sha $(git log -1 --format=%s "$sha")"
+  printf 'push the revert to origin/%s? [y/N] ' "$branch"
+  local reply
+  read -r reply
+  case "$reply" in
+    y|Y) ;;
+    *) echo "stopped; nothing changed"; return 1 ;;
+  esac
+
+  # abort on conflict so the tree is left exactly as it was found
+  if ! git revert --no-edit "$sha"; then
+    git revert --abort 2>/dev/null
+    echo "revert conflicts with later work; nothing changed. resolve by hand:" >&2
+    echo "  git revert $sha" >&2
+    return 1
+  fi
+  git push origin "$branch"
 }
 
 function find-string() {
