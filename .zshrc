@@ -52,22 +52,10 @@ alias kctx='kubectl config use-context'
 alias aws-who='aws iam list-account-aliases --output json |  jq ".AccountAliases"'
 alias rmk8saws='rm ~/.kube/config ~/.aws/credentials'
 alias gitleaks_scan='gitleaks detect --log-opts="--all" -f "json" -r "./gitleaks.json"'
-alias clc='headroom wrap claude -- --dangerously-skip-permissions'
-alias clcl='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions'
-alias so='headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
-alias nhso='claude --dangerously-skip-permissions --model "sonnet[1m]"'
-alias sol='HEADROOM_LOSSLESS=1 headroom wrap claude -- --dangerously-skip-permissions --model "sonnet[1m]"'
 alias os='openspec'
 alias grep='rg'
 alias os='openspec'
-alias jsontidy="pbpaste | jq '.' | pbcopy"
-
-# RESET DATABASES
-alias resetmy='sudo docker container exec -i dev_db_1 mysql -u root -ppassword tib_dev_9101 < dump.sql'
-alias resetmycq='sudo docker container exec -i api_db_1 psql -U postgres cquentia < ./dump.psql'
-alias resetpg='sudo docker container exec -it api_db_1 psql -U postgres -d visionaire -f load.sql'
-alias resetconnect='sudo docker container exec -it api_db_1 psql -U postgres -d dco_dev_9503 -f .reset_psql'
-alias connect_pg='psql --no-password --user $XXX_PSQL_USER --host $XXX_PSQL_HOST --port $XXX_PSQL_PORT --echo-all < .reset_psql'
+alias tidyjson="pbpaste | jq '.' | pbcopy"
 
 # DOCKER
 alias dconls='docker container ls'
