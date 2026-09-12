@@ -168,7 +168,7 @@ function git-revert-push() {
 }
 
 function find-string() {
- grep -ri $1 .
+ rg -ri $1 .
 }
 
 alias fstr='find-string'
