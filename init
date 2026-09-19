@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 set -e
 
+PROFILE="$1"
+
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPTS_DIR="$(cd "$(dirname "$0")/scripts" && pwd)"
 
@@ -100,13 +102,43 @@ link_file() {
     echo "Symlinked $dest → $src"
 }
 
+# Layers CLAUDE.md base + profiles/<profile>.md into ~/.claude/CLAUDE.md.
+# No profile: symlink the base as before. With a profile: the result is a
+# generated file, so it's written, not symlinked.
+install_claude_md() {
+    local base="$REPO_DIR/CLAUDE.md"
+    local target="$HOME/.claude/CLAUDE.md"
+    local profile="$1"
+
+    if [ -z "$profile" ]; then
+        link_file "$base" "$target"
+        return
+    fi
+
+    local fragment="$REPO_DIR/profiles/$profile.md"
+    if [ ! -f "$fragment" ]; then
+        echo "Error: profile '$profile' not found at $fragment" >&2
+        setopt local_options nullglob
+        local available=("$REPO_DIR"/profiles/*.md)
+        echo "Available profiles: ${available[*]:t:r}" >&2
+        exit 1
+    fi
+
+    if [ -L "$target" ]; then
+        rm "$target"
+    elif [ -e "$target" ]; then
+        mv "$target" "$target.backup"
+        echo "Backed up existing $target to $target.backup"
+    fi
+    { cat "$base"; echo; cat "$fragment"; } > "$target"
+    echo "Wrote $target from base + '$profile' profile"
+}
+
 ZSHRC_SOURCE="$REPO_DIR/.zshrc"
 ZSHRC_TARGET="$HOME/.zshrc"
-CLAUDE_MD_SOURCE="$REPO_DIR/CLAUDE.md"
-CLAUDE_MD_TARGET="$HOME/.claude/CLAUDE.md"
 
 link_file "$ZSHRC_SOURCE" "$ZSHRC_TARGET"
-link_file "$CLAUDE_MD_SOURCE" "$CLAUDE_MD_TARGET"
+install_claude_md "$PROFILE"
 
 # Cross-repo skills live in conf/skills, grouped into category folders
 # (e.g. rails/, general/). conf/.claude/skills/openspec-* are separate:

@@ -70,10 +70,3 @@
 - Do not install or upgrade a package
 - Save what we learn together in $HOME/Documents/chasen-learnings, one
   markdown file per topic.
-
-## Git
-
-- Every branch maps to a Jira ticket. Create the ticket before the branch.
-- Name the branch for the ticket (e.g. SECENG-123).
-- Prefix every commit message: `[SECENG-123] Short summary`.
-- Write a message that explains the change.
